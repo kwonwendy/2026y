@@ -7,30 +7,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f0f13;
-    --surface: #1a1a22;
-    --surface2: #22222e;
-    --border: #2e2e3e;
-    --accent: #7c6af7;
-    --accent2: #f76a8a;
-    --accent3: #6af7b8;
-    --accent4: #f7c76a;
-    --text: #e8e8f0;
-    --text2: #9090a8;
-    --text3: #5a5a72;
-    --approved: #6af7b8;
-    --pending: #f7c76a;
-    --rejected: #f76a8a;
+    --bg: #0f0f13; --surface: #1a1a22; --surface2: #22222e; --border: #2e2e3e;
+    --accent: #7c6af7; --accent2: #f76a8a; --accent3: #6af7b8; --accent4: #f7c76a;
+    --text: #e8e8f0; --text2: #9090a8; --text3: #5a5a72;
+    --approved: #6af7b8; --pending: #f7c76a; --rejected: #f76a8a;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-  /* HEADER */
-  .header {
-    background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 20px 40px; display: flex; align-items: center; gap: 16px;
-    position: sticky; top: 0; z-index: 100;
-  }
+  /* 로딩 오버레이 */
+  .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; gap: 16px; transition: opacity 0.3s; }
+  .loading-overlay.hide { opacity: 0; pointer-events: none; }
+  .loading-spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--text2); font-size: 14px; }
+
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 20px 40px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
   .header-logo { width: 36px; height: 36px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
   .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
   .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
@@ -42,7 +34,6 @@
   .admin-logout-btn { background: none; border: none; color: var(--text3); font-size: 11px; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; }
   .admin-logout-btn:hover { color: var(--accent2); background: #f76a8a10; }
 
-  /* NAV */
   .nav-tabs { display: flex; gap: 4px; padding: 20px 40px 0; border-bottom: 1px solid var(--border); background: var(--surface); }
   .tab-btn { padding: 10px 22px; border: none; background: none; color: var(--text2); font-family: 'Noto Sans KR', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.2s; }
   .tab-btn:hover { color: var(--text); }
@@ -70,15 +61,12 @@
   .login-cancel-btn { background: none; border: none; color: var(--text3); font-size: 13px; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; padding: 6px; }
   .login-cancel-btn:hover { color: var(--text2); }
 
-  /* SECTION HEADERS */
   .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
   .section-title { font-size: 22px; font-weight: 700; }
   .section-desc { color: var(--text2); font-size: 13px; margin-top: 4px; }
 
-  /* APPLY LAYOUT */
   .apply-layout { display: grid; grid-template-columns: 1fr 360px; gap: 24px; }
 
-  /* CALENDAR */
   .calendar-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
   .cal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); }
   .cal-nav { display: flex; gap: 8px; }
@@ -95,7 +83,6 @@
   .cal-cell.today { font-weight: 700; color: var(--accent); }
   .cal-cell.today::after { content:''; position:absolute; bottom:4px; width:4px; height:4px; background:var(--accent); border-radius:50%; }
   .cal-cell.selected { background: var(--accent); color: white; font-weight: 600; }
-  .cal-cell.range { background: #7c6af720; color: var(--accent); }
   .cal-cell.empty { color: var(--text3); cursor: default; }
   .cal-cell.sunday { color: #f76a8a88; }
   .cal-cell.saturday { color: #6a9af788; }
@@ -103,7 +90,6 @@
   .leave-dots { display: flex; gap: 2px; margin-top: 1px; }
   .leave-dot { width: 3px; height: 3px; border-radius: 50%; }
 
-  /* APPLY FORM */
   .apply-form { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
   .form-title { font-size: 16px; font-weight: 700; }
   .form-group { display: flex; flex-direction: column; gap: 6px; }
@@ -119,6 +105,7 @@
   .leave-type-btn.active { border-color: var(--accent); background: #7c6af715; color: var(--accent); }
   .submit-btn { padding: 12px; background: var(--accent); color: white; border: none; border-radius: 10px; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.15s; margin-top: 4px; }
   .submit-btn:hover { background: #6a58e0; transform: translateY(-1px); }
+  .submit-btn:disabled { background: var(--surface2); color: var(--text3); cursor: not-allowed; transform: none; }
   .remaining-info { background: var(--surface2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; font-size: 13px; }
   .remaining-info span { color: var(--text2); }
   .remaining-info strong { color: var(--accent3); }
@@ -126,27 +113,21 @@
   .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); }
   .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
 
-  /* STATS GRID */
   .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap: 16px; margin-bottom: 32px; }
   .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px 24px; }
   .stat-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .employee-name { font-size: 16px; font-weight: 700; }
   .employee-avatar { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: white; }
-
-  /* 2개의 진행 바 */
   .stat-bars { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
   .stat-row { display: flex; flex-direction: column; gap: 4px; }
   .stat-row-header { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); }
   .stat-bar-bg { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
   .stat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
-
-  /* stat numbers: 총 연차 / 재량 휴가 / 사용 연차 / 잔여 연차 */
   .stat-numbers { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; padding-top: 16px; border-top: 1px solid var(--border); }
   .stat-num { text-align: center; }
   .stat-num-val { font-size: 18px; font-weight: 700; font-family: 'DM Mono', monospace; }
   .stat-num-label { font-size: 10px; color: var(--text2); margin-top: 2px; }
 
-  /* TABLE */
   .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
   .table-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
   .table-title { font-size: 15px; font-weight: 700; }
@@ -161,7 +142,6 @@
   .badge-pending { background: #f7c76a20; color: var(--pending); }
   .badge-rejected { background: #f76a8a20; color: var(--rejected); }
 
-  /* APPROVALS */
   .approval-grid { display: flex; flex-direction: column; gap: 12px; }
   .approval-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 16px; }
   .approval-card.approved { border-left: 3px solid var(--approved); }
@@ -183,13 +163,11 @@
   .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
   .empty-state p { font-size: 14px; }
 
-  /* TOAST */
   .toast { position: fixed; bottom: 30px; right: 30px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 20px; font-size: 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); transform: translateY(100px); opacity: 0; transition: all 0.3s ease; z-index: 1000; }
   .toast.show { transform: translateY(0); opacity: 1; }
   .toast.success { border-color: var(--approved); }
   .toast.error { border-color: var(--rejected); }
 
-  /* MODAL */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
   .modal-overlay.show { opacity: 1; pointer-events: all; }
   .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 400px; transform: scale(0.95); transition: transform 0.2s; }
@@ -212,6 +190,12 @@
 </style>
 </head>
 <body>
+
+<!-- 로딩 화면 -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">데이터를 불러오는 중...</div>
+</div>
 
 <div class="header">
   <div class="header-logo">📅</div>
@@ -272,7 +256,7 @@
         </select>
       </div>
       <div class="form-group">
-        <div class="form-label">신청 기간 (캘린더에서 클릭)</div>
+        <div class="form-label">신청 날짜 (캘린더에서 클릭)</div>
         <div class="date-range-display" id="dateRangeDisplay">날짜를 선택해주세요</div>
       </div>
       <div class="form-group">
@@ -293,7 +277,7 @@
         <span id="remainingLabel">잔여 연차</span>
         <strong id="remainingDays">0일</strong>
       </div>
-      <button class="submit-btn" onclick="submitLeave()">연차 신청하기</button>
+      <button class="submit-btn" id="submitBtn" onclick="submitLeave()">연차 신청하기</button>
     </div>
   </div>
 </div>
@@ -316,14 +300,14 @@
     </div>
     <table>
       <thead>
-        <tr><th>직원</th><th>유형</th><th>기간</th><th>일수</th><th>사유</th><th>상태</th><th>신청일</th></tr>
+        <tr><th>직원</th><th>유형</th><th>날짜</th><th>일수</th><th>사유</th><th>상태</th><th>신청일</th></tr>
       </thead>
       <tbody id="historyTable"></tbody>
     </table>
   </div>
 </div>
 
-<!-- SECTION 3: 승인 관리 (관리자 전용) -->
+<!-- SECTION 3: 승인 관리 -->
 <div class="section" id="section-2">
   <div class="section-header">
     <div>
@@ -340,11 +324,9 @@
     <div class="login-icon">🔐</div>
     <h2>관리자 로그인</h2>
     <p>승인 관리 기능은 관리자만<br>사용할 수 있습니다.</p>
-    <input type="password" class="login-input" id="loginInput"
-      placeholder="비밀번호 입력"
+    <input type="password" class="login-input" id="loginInput" placeholder="비밀번호 입력"
       onkeydown="if(event.key==='Enter') doLogin()"
-      oninput="document.getElementById('loginError').textContent=''"
-    />
+      oninput="document.getElementById('loginError').textContent=''" />
     <div class="login-error" id="loginError"></div>
     <button class="login-btn" onclick="doLogin()">로그인</button>
     <button class="login-cancel-btn" onclick="closeLoginModal()">취소</button>
@@ -369,11 +351,27 @@
   <span id="toastMsg"></span>
 </div>
 
-<script>
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA279nTvQk6J_wNC1AIUT07IgwQOa6J7Zo",
+  authDomain: "y-3aece.firebaseapp.com",
+  projectId: "y-3aece",
+  storageBucket: "y-3aece.firebasestorage.app",
+  messagingSenderId: "682772417884",
+  appId: "1:682772417884:web:f2cf3b6386dbc01c2a8599",
+  measurementId: "G-HN1L75JLER"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ====== 상수 ======
 const ADMIN_PW = '080525';
 const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-
-// 직원 데이터: total = 연차, discretionary = 재량휴가 (전원 5일 고정)
 const EMPLOYEES = [
   { name: '서훈',   total: 15, discretionary: 5, color: '#7c6af7' },
   { name: '박미화', total: 25, discretionary: 5, color: '#f76a8a' },
@@ -386,37 +384,53 @@ const EMPLOYEES = [
 const EMP_MAP = {};
 EMPLOYEES.forEach(e => { EMP_MAP[e.name] = e; });
 
+// ====== 상태 ======
 let leaves = [];
 let isAdmin = false;
 let calDate = new Date();
-let selectedStart = null, selectedEnd = null, isSelectingEnd = false;
+let selectedDate = null;
 let selectedLeaveType = '연차';
 let currentTab = 0;
 let pendingAction = null;
 
-// 재량휴가인지 여부
-function isDiscretionary(type) { return type === '재량휴가'; }
-
+// ====== 초기화 ======
 function init() {
   document.getElementById('currentDateDisplay').textContent =
     new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
   EMPLOYEES.forEach(e => {
     document.getElementById('applyEmployee').innerHTML += `<option value="${e.name}">${e.name}</option>`;
     document.getElementById('historyFilter').innerHTML += `<option value="${e.name}">${e.name}</option>`;
   });
-  renderCalendar(); renderStats(); renderHistory();
+
+  renderCalendar();
+
+  // Firestore 실시간 리스닝
+  const q = query(collection(db, 'leaves'), orderBy('appliedAt', 'desc'));
+  onSnapshot(q, (snapshot) => {
+    leaves = snapshot.docs.map(doc => ({ ...doc.data(), firestoreId: doc.id }));
+    renderCalendar();
+    if (currentTab === 1) { renderStats(); renderHistory(); }
+    if (currentTab === 2) renderApprovals();
+    // 로딩 숨기기
+    document.getElementById('loadingOverlay').classList.add('hide');
+  }, (error) => {
+    console.error('Firestore 오류:', error);
+    document.getElementById('loadingOverlay').classList.add('hide');
+    showToast('데이터 로드 실패. 새로고침 해주세요.', 'error');
+  });
 }
 
-// ====== ADMIN ======
-function openLoginModal() {
+// ====== 관리자 ======
+window.openLoginModal = function() {
   document.getElementById('loginInput').value = '';
   document.getElementById('loginError').textContent = '';
   document.getElementById('loginOverlay').classList.add('show');
   setTimeout(() => document.getElementById('loginInput').focus(), 200);
-}
-function closeLoginModal() { document.getElementById('loginOverlay').classList.remove('show'); }
+};
+window.closeLoginModal = function() { document.getElementById('loginOverlay').classList.remove('show'); };
 
-function doLogin() {
+window.doLogin = function() {
   const pw = document.getElementById('loginInput').value;
   if (pw === ADMIN_PW) {
     isAdmin = true;
@@ -431,28 +445,23 @@ function doLogin() {
     input.value = '';
     setTimeout(() => input.classList.remove('error'), 400);
   }
-}
+};
 
-function doLogout() {
+window.doLogout = function() {
   isAdmin = false;
   updateAdminUI();
   switchTab(0);
   showToast('로그아웃되었습니다.', 'success');
-}
+};
 
 function updateAdminUI() {
   const statusEl = document.getElementById('adminStatus');
   const navTabs = document.getElementById('navTabs');
   if (isAdmin) {
-    statusEl.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px">
-        <div class="admin-badge">🛡️ 관리자 모드</div>
-        <button class="admin-logout-btn" onclick="doLogout()">로그아웃</button>
-      </div>`;
+    statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px"><div class="admin-badge">🛡️ 관리자 모드</div><button class="admin-logout-btn" onclick="doLogout()">로그아웃</button></div>`;
     if (!document.getElementById('adminTab')) {
       const btn = document.createElement('button');
-      btn.className = 'tab-btn admin-tab';
-      btn.id = 'adminTab';
+      btn.className = 'tab-btn admin-tab'; btn.id = 'adminTab';
       btn.innerHTML = '✅ 승인 관리';
       btn.onclick = () => switchTab(2);
       navTabs.appendChild(btn);
@@ -464,23 +473,19 @@ function updateAdminUI() {
   }
 }
 
-// ====== TAB ======
-function switchTab(idx) {
+// ====== 탭 ======
+window.switchTab = function(idx) {
   if (idx === 2 && !isAdmin) { openLoginModal(); return; }
   currentTab = idx;
   document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === idx));
   document.querySelectorAll('.section').forEach((sec, i) => sec.classList.toggle('active', i === idx));
   if (idx === 1) { renderStats(); renderHistory(); }
-  if (idx === 2) { renderApprovals(); }
-}
+  if (idx === 2) renderApprovals();
+};
 
-// ====== CALENDAR ======
-function changeMonth(dir) {
-  calDate.setMonth(calDate.getMonth() + dir);
-  selectedStart = null; selectedEnd = null; isSelectingEnd = false;
-  updateDateDisplay(); renderCalendar();
-}
-function goToToday() { calDate = new Date(); renderCalendar(); }
+// ====== 캘린더 ======
+window.changeMonth = function(dir) { calDate.setMonth(calDate.getMonth() + dir); renderCalendar(); };
+window.goToToday = function() { calDate = new Date(); renderCalendar(); };
 
 function renderCalendar() {
   const year = calDate.getFullYear(), month = calDate.getMonth();
@@ -491,6 +496,7 @@ function renderCalendar() {
   const today = new Date();
   const container = document.getElementById('calCells');
   container.innerHTML = '';
+
   for (let i = 0; i < firstDay; i++) {
     const cell = document.createElement('div');
     cell.className = 'cal-cell empty';
@@ -504,13 +510,14 @@ function renderCalendar() {
     if (dow === 0) cell.classList.add('sunday');
     if (dow === 6) cell.classList.add('saturday');
     if (today.getFullYear()===year && today.getMonth()===month && today.getDate()===d) cell.classList.add('today');
-    const sel = isInSelection(date);
-    if (sel === 'selected') cell.classList.add('selected');
-    else if (sel === 'range') cell.classList.add('range');
+    if (selectedDate && selectedDate.toDateString()===date.toDateString()) cell.classList.add('selected');
+
     const numSpan = document.createElement('span');
     numSpan.textContent = d;
     cell.appendChild(numSpan);
-    const dayLeaves = leaves.filter(l => { const s = new Date(l.startDate), e = new Date(l.endDate); return date >= s && date <= e; });
+
+    const dateStr = formatDate(date);
+    const dayLeaves = leaves.filter(l => l.startDate === dateStr);
     if (dayLeaves.length > 0) {
       const dots = document.createElement('div');
       dots.className = 'leave-dots';
@@ -527,105 +534,102 @@ function renderCalendar() {
   }
 }
 
-function isInSelection(date) {
-  if (!selectedStart) return null;
-  const s = selectedStart, e = selectedEnd || selectedStart;
-  const from = s < e ? s : e, to = s < e ? e : s;
-  if (date.toDateString()===from.toDateString() || date.toDateString()===to.toDateString()) return 'selected';
-  if (date > from && date < to) return 'range';
-  return null;
-}
 function handleDateClick(date) {
-  // 항상 하루씩만 선택 (범위 선택 없음)
-  selectedStart = date;
-  selectedEnd = date;
-  isSelectingEnd = false;
-  updateDateDisplay(); renderCalendar();
+  selectedDate = date;
+  updateDateDisplay();
+  renderCalendar();
 }
 
 function updateDateDisplay() {
   const el = document.getElementById('dateRangeDisplay');
-  if (!selectedStart) { el.textContent = '날짜를 선택해주세요'; el.classList.remove('filled'); return; }
+  if (!selectedDate) { el.textContent = '날짜를 선택해주세요'; el.classList.remove('filled'); return; }
   el.classList.add('filled');
   const dayCount = selectedLeaveType.includes('반차') ? 0.5 : 1;
-  el.textContent = formatDate(selectedStart) + ' (' + dayCount + '일)';
+  el.textContent = formatDate(selectedDate) + ' (' + dayCount + '일)';
 }
-function calcWorkDays(start, end) {
-  let count = 0, d = new Date(start);
-  while (d <= end) { if (d.getDay()!==0 && d.getDay()!==6) count++; d.setDate(d.getDate()+1); }
-  return count || 1;
-}
+
 function formatDate(date) {
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 }
 
-function selectLeaveType(btn, type) {
+window.selectLeaveType = function(btn, type) {
   document.querySelectorAll('.leave-type-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   selectedLeaveType = type;
-  // 잔여 정보 라벨 업데이트
   const empName = document.getElementById('applyEmployee').value;
   if (empName) updateRemainingInfo();
   updateDateDisplay();
-}
+};
 
-function updateRemainingInfo() {
+window.updateRemainingInfo = function() {
   const name = document.getElementById('applyEmployee').value;
   const el = document.getElementById('remainingInfo');
   if (!name) { el.style.display = 'none'; return; }
   el.style.display = 'flex';
   const emp = EMP_MAP[name];
-  if (isDiscretionary(selectedLeaveType)) {
-    const usedD = getUsedDiscretionary(name);
+  if (selectedLeaveType === '재량휴가') {
     document.getElementById('remainingLabel').textContent = '잔여 재량휴가';
-    document.getElementById('remainingDays').textContent = (emp.discretionary - usedD) + '일';
+    document.getElementById('remainingDays').textContent = (emp.discretionary - getUsedDiscretionary(name)) + '일';
   } else {
-    const usedL = getUsedLeave(name);
     document.getElementById('remainingLabel').textContent = '잔여 연차';
-    document.getElementById('remainingDays').textContent = (emp.total - usedL) + '일';
+    document.getElementById('remainingDays').textContent = (emp.total - getUsedLeave(name)) + '일';
   }
-}
+};
 
-// 연차 사용일 (재량휴가 제외, 반려 제외)
 function getUsedLeave(name) {
-  return leaves.filter(l => l.employee===name && l.status!=='rejected' && !isDiscretionary(l.type))
-    .reduce((sum,l) => sum+l.days, 0);
+  return leaves.filter(l => l.employee===name && l.status!=='rejected' && l.type!=='재량휴가').reduce((sum,l) => sum+l.days, 0);
 }
-// 재량휴가 사용일 (반려 제외)
 function getUsedDiscretionary(name) {
-  return leaves.filter(l => l.employee===name && l.status!=='rejected' && isDiscretionary(l.type))
-    .reduce((sum,l) => sum+l.days, 0);
+  return leaves.filter(l => l.employee===name && l.status!=='rejected' && l.type==='재량휴가').reduce((sum,l) => sum+l.days, 0);
 }
 
-function submitLeave() {
+// ====== 연차 신청 (Firestore 저장) ======
+window.submitLeave = async function() {
   const name = document.getElementById('applyEmployee').value;
   const reason = document.getElementById('applyReason').value;
   if (!name) { showToast('직원을 선택해주세요.', 'error'); return; }
-  if (!selectedStart) { showToast('날짜를 선택해주세요.', 'error'); return; }
-  const end = selectedEnd || selectedStart;
+  if (!selectedDate) { showToast('날짜를 선택해주세요.', 'error'); return; }
+
   const days = selectedLeaveType.includes('반차') ? 0.5 : 1;
   const emp = EMP_MAP[name];
 
-  if (isDiscretionary(selectedLeaveType)) {
+  if (selectedLeaveType === '재량휴가') {
     const remaining = emp.discretionary - getUsedDiscretionary(name);
     if (days > remaining) { showToast(`재량휴가 잔여일이 부족합니다. (잔여: ${remaining}일)`, 'error'); return; }
-  } else {
+  } else if (selectedLeaveType !== '공가') {
     const remaining = emp.total - getUsedLeave(name);
     if (days > remaining) { showToast(`잔여 연차가 부족합니다. (잔여: ${remaining}일)`, 'error'); return; }
   }
 
-  leaves.unshift({
-    id: Date.now(), employee: name, type: selectedLeaveType,
-    startDate: formatDate(selectedStart), endDate: formatDate(end),
-    days, reason: reason||'미기재', status: 'pending', appliedAt: formatDate(new Date())
-  });
-  showToast(`${name}님의 ${selectedLeaveType} 신청이 완료되었습니다.`, 'success');
-  selectedStart = null; selectedEnd = null; isSelectingEnd = false;
-  document.getElementById('applyReason').value = '';
-  updateDateDisplay(); renderCalendar(); updateRemainingInfo();
-}
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '신청 중...';
 
-// ====== STATS ======
+  try {
+    await addDoc(collection(db, 'leaves'), {
+      employee: name,
+      type: selectedLeaveType,
+      startDate: formatDate(selectedDate),
+      endDate: formatDate(selectedDate),
+      days,
+      reason: reason || '미기재',
+      status: 'pending',
+      appliedAt: formatDate(new Date()),
+    });
+    showToast(`${name}님의 ${selectedLeaveType} 신청이 완료되었습니다.`, 'success');
+    selectedDate = null;
+    document.getElementById('applyReason').value = '';
+    updateDateDisplay();
+    updateRemainingInfo();
+  } catch (e) {
+    showToast('신청 중 오류가 발생했습니다.', 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '연차 신청하기';
+};
+
+// ====== 현황 ======
 function renderStats() {
   const grid = document.getElementById('statsGrid');
   grid.innerHTML = '';
@@ -633,7 +637,6 @@ function renderStats() {
     const usedLeave = getUsedLeave(emp.name);
     const usedDisc = getUsedDiscretionary(emp.name);
     const remainLeave = emp.total - usedLeave;
-    const remainDisc = emp.discretionary - usedDisc;
     const leavePct = Math.min((usedLeave / emp.total) * 100, 100);
     const discPct = Math.min((usedDisc / emp.discretionary) * 100, 100);
     grid.innerHTML += `
@@ -653,22 +656,10 @@ function renderStats() {
           </div>
         </div>
         <div class="stat-numbers">
-          <div class="stat-num">
-            <div class="stat-num-val" style="color:${emp.color}">${emp.total}</div>
-            <div class="stat-num-label">총 연차</div>
-          </div>
-          <div class="stat-num">
-            <div class="stat-num-val" style="color:var(--accent4)">${emp.discretionary}</div>
-            <div class="stat-num-label">재량휴가</div>
-          </div>
-          <div class="stat-num">
-            <div class="stat-num-val" style="color:var(--accent2)">${usedLeave}</div>
-            <div class="stat-num-label">사용 연차</div>
-          </div>
-          <div class="stat-num">
-            <div class="stat-num-val" style="color:var(--accent3)">${remainLeave}</div>
-            <div class="stat-num-label">잔여 연차</div>
-          </div>
+          <div class="stat-num"><div class="stat-num-val" style="color:${emp.color}">${emp.total}</div><div class="stat-num-label">총 연차</div></div>
+          <div class="stat-num"><div class="stat-num-val" style="color:var(--accent4)">${emp.discretionary}</div><div class="stat-num-label">재량휴가</div></div>
+          <div class="stat-num"><div class="stat-num-val" style="color:var(--accent2)">${usedLeave}</div><div class="stat-num-label">사용 연차</div></div>
+          <div class="stat-num"><div class="stat-num-val" style="color:var(--accent3)">${remainLeave}</div><div class="stat-num-label">잔여 연차</div></div>
         </div>
       </div>`;
   });
@@ -686,7 +677,7 @@ function renderHistory() {
     <tr>
       <td><strong>${l.employee}</strong></td>
       <td>${l.type}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px">${l.startDate} ~ ${l.endDate}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${l.startDate}</td>
       <td><strong>${l.days}일</strong></td>
       <td style="color:var(--text2)">${l.reason}</td>
       <td><span class="badge badge-${l.status}">${l.status==='approved'?'승인':l.status==='rejected'?'반려':'대기중'}</span></td>
@@ -694,7 +685,7 @@ function renderHistory() {
     </tr>`).join('');
 }
 
-// ====== APPROVALS ======
+// ====== 승인 관리 ======
 function renderApprovals() {
   const grid = document.getElementById('approvalGrid');
   if (leaves.length === 0) {
@@ -710,14 +701,14 @@ function renderApprovals() {
       : l.status==='rejected'
       ? `<span style="color:var(--rejected);font-size:13px;font-weight:700">❌ 반려</span>` : '';
     const actions = isPending
-      ? `<button class="btn-approve" onclick="openModal('approve',${l.id})">✓ 승인</button><button class="btn-reject" onclick="openModal('reject',${l.id})">✗ 반려</button>`
+      ? `<button class="btn-approve" onclick="openApprovalModal('approve','${l.firestoreId}')">✓ 승인</button><button class="btn-reject" onclick="openApprovalModal('reject','${l.firestoreId}')">✗ 반려</button>`
       : `<div class="btn-locked">🔒 처리완료</div>`;
     return `<div class="approval-card ${l.status}">
       <div class="approval-avatar" style="background:${emp.color}">${l.employee[0]}</div>
       <div class="approval-info">
         <div class="approval-name">${l.employee} · <span style="font-weight:400;font-size:13px">${l.type}</span></div>
         <div class="approval-detail">${l.days}일 · ${l.reason}</div>
-        <div class="approval-dates">${l.startDate} ~ ${l.endDate}</div>
+        <div class="approval-dates">${l.startDate}</div>
       </div>
       ${statusLabel}
       <div class="approval-actions">${actions}</div>
@@ -725,14 +716,13 @@ function renderApprovals() {
   }).join('');
 }
 
-// ====== MODAL ======
-function openModal(action, leaveId) {
-  const leave = leaves.find(l => l.id===leaveId);
-  pendingAction = { action, leaveId };
+window.openApprovalModal = function(action, firestoreId) {
+  const leave = leaves.find(l => l.firestoreId===firestoreId);
+  pendingAction = { action, firestoreId };
   const confirmBtn = document.getElementById('modalConfirmBtn');
   if (action==='approve') {
     document.getElementById('modalTitle').textContent = '연차 승인';
-    document.getElementById('modalDesc').textContent = `${leave.employee}님의 ${leave.type} 신청을 승인하시겠습니까?\n기간: ${leave.startDate} ~ ${leave.endDate} (${leave.days}일)\n\n승인 후에는 수정이 불가합니다.`;
+    document.getElementById('modalDesc').textContent = `${leave.employee}님의 ${leave.type} 신청을 승인하시겠습니까?\n날짜: ${leave.startDate} (${leave.days}일)\n\n승인 후에는 수정이 불가합니다.`;
     confirmBtn.textContent = '승인하기'; confirmBtn.className = 'modal-btn modal-btn-confirm';
   } else {
     document.getElementById('modalTitle').textContent = '연차 반려';
@@ -740,21 +730,27 @@ function openModal(action, leaveId) {
     confirmBtn.textContent = '반려하기'; confirmBtn.className = 'modal-btn modal-btn-reject-confirm';
   }
   document.getElementById('modalOverlay').classList.add('show');
-}
-function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); pendingAction = null; }
-function modalConfirm() {
+};
+
+window.closeModal = function() { document.getElementById('modalOverlay').classList.remove('show'); pendingAction = null; };
+
+window.modalConfirm = async function() {
   if (!pendingAction) return;
-  const { action, leaveId } = pendingAction;
-  const leave = leaves.find(l => l.id===leaveId);
-  leave.status = action==='approve' ? 'approved' : 'rejected';
+  const { action, firestoreId } = pendingAction;
+  const leave = leaves.find(l => l.firestoreId===firestoreId);
   closeModal();
-  showToast(`${leave.employee}님의 ${leave.type}이 ${action==='approve'?'승인':'반려'}되었습니다.`, action==='approve'?'success':'error');
-  renderApprovals(); renderStats(); renderHistory(); renderCalendar();
-}
+  try {
+    await updateDoc(doc(db, 'leaves', firestoreId), { status: action==='approve' ? 'approved' : 'rejected' });
+    showToast(`${leave.employee}님의 ${leave.type}이 ${action==='approve'?'승인':'반려'}되었습니다.`, action==='approve'?'success':'error');
+  } catch(e) {
+    showToast('처리 중 오류가 발생했습니다.', 'error');
+  }
+};
+
 document.getElementById('modalOverlay').onclick = function(e) { if(e.target===this) closeModal(); };
 document.getElementById('loginOverlay').onclick = function(e) { if(e.target===this) closeLoginModal(); };
 
-// ====== TOAST ======
+// ====== 토스트 ======
 function showToast(msg, type='success') {
   const toast = document.getElementById('toast');
   document.getElementById('toastIcon').textContent = type==='success' ? '✅' : '❌';
