@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>연차 관리 시스템</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Firebase CDN (compat 버전 - GitHub Pages 호환) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
 <style>
   :root {
     --bg: #0f0f13; --surface: #1a1a22; --surface2: #22222e; --border: #2e2e3e;
@@ -15,7 +20,6 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-  /* 로딩 오버레이 */
   .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; gap: 16px; transition: opacity 0.3s; }
   .loading-overlay.hide { opacity: 0; pointer-events: none; }
   .loading-spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -43,7 +47,6 @@
   .section { display: none; padding: 32px 40px; }
   .section.active { display: block; }
 
-  /* LOGIN MODAL */
   .login-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 300; opacity: 0; pointer-events: none; transition: opacity 0.25s; backdrop-filter: blur(4px); }
   .login-overlay.show { opacity: 1; pointer-events: all; }
   .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 36px; width: 360px; transform: scale(0.95) translateY(10px); transition: transform 0.25s; text-align: center; }
@@ -59,7 +62,6 @@
   .login-btn { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 10px; font-family: 'Noto Sans KR', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.15s; margin-bottom: 10px; }
   .login-btn:hover { background: #6a58e0; }
   .login-cancel-btn { background: none; border: none; color: var(--text3); font-size: 13px; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; padding: 6px; }
-  .login-cancel-btn:hover { color: var(--text2); }
 
   .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
   .section-title { font-size: 22px; font-weight: 700; }
@@ -191,7 +193,6 @@
 </head>
 <body>
 
-<!-- 로딩 화면 -->
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-spinner"></div>
   <div class="loading-text">데이터를 불러오는 중...</div>
@@ -213,7 +214,7 @@
   <button class="tab-btn" onclick="switchTab(1)">📊 연차 현황</button>
 </div>
 
-<!-- SECTION 1: 연차 신청 -->
+<!-- SECTION 1 -->
 <div class="section active" id="section-0">
   <div class="section-header">
     <div>
@@ -282,7 +283,7 @@
   </div>
 </div>
 
-<!-- SECTION 2: 연차 현황 -->
+<!-- SECTION 2 -->
 <div class="section" id="section-1">
   <div class="section-header">
     <div>
@@ -307,7 +308,7 @@
   </div>
 </div>
 
-<!-- SECTION 3: 승인 관리 -->
+<!-- SECTION 3 -->
 <div class="section" id="section-2">
   <div class="section-header">
     <div>
@@ -351,415 +352,408 @@
   <span id="toastMsg"></span>
 </div>
 
-<!-- Firebase SDK -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<script>
+  // ====== Firebase 초기화 ======
+  const firebaseConfig = {
+    apiKey: "AIzaSyA279nTvQk6J_wNC1AIUT07IgwQOa6J7Zo",
+    authDomain: "y-3aece.firebaseapp.com",
+    projectId: "y-3aece",
+    storageBucket: "y-3aece.firebasestorage.app",
+    messagingSenderId: "682772417884",
+    appId: "1:682772417884:web:f2cf3b6386dbc01c2a8599"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
-const firebaseConfig = {
-  apiKey: "AIzaSyA279nTvQk6J_wNC1AIUT07IgwQOa6J7Zo",
-  authDomain: "y-3aece.firebaseapp.com",
-  projectId: "y-3aece",
-  storageBucket: "y-3aece.firebasestorage.app",
-  messagingSenderId: "682772417884",
-  appId: "1:682772417884:web:f2cf3b6386dbc01c2a8599",
-  measurementId: "G-HN1L75JLER"
-};
+  // ====== 상수 ======
+  const ADMIN_PW = '080525';
+  const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const EMPLOYEES = [
+    { name: '서훈',   total: 15, discretionary: 5, color: '#7c6af7' },
+    { name: '박미화', total: 25, discretionary: 5, color: '#f76a8a' },
+    { name: '김호민', total: 24, discretionary: 5, color: '#6af7b8' },
+    { name: '이춘재', total: 18, discretionary: 5, color: '#f7c76a' },
+    { name: '백인성', total: 19, discretionary: 5, color: '#6ab4f7' },
+    { name: '권민정', total: 20, discretionary: 5, color: '#f7a06a' },
+    { name: '김소정', total: 19, discretionary: 5, color: '#a06af7' },
+  ];
+  const EMP_MAP = {};
+  EMPLOYEES.forEach(e => { EMP_MAP[e.name] = e; });
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+  // ====== 상태 ======
+  let leaves = [];
+  let isAdmin = false;
+  let calDate = new Date();
+  let selectedDate = null;
+  let selectedLeaveType = '연차';
+  let currentTab = 0;
+  let pendingAction = null;
 
-// ====== 상수 ======
-const ADMIN_PW = '080525';
-const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-const EMPLOYEES = [
-  { name: '서훈',   total: 15, discretionary: 5, color: '#7c6af7' },
-  { name: '박미화', total: 25, discretionary: 5, color: '#f76a8a' },
-  { name: '김호민', total: 24, discretionary: 5, color: '#6af7b8' },
-  { name: '이춘재', total: 18, discretionary: 5, color: '#f7c76a' },
-  { name: '백인성', total: 19, discretionary: 5, color: '#6ab4f7' },
-  { name: '권민정', total: 20, discretionary: 5, color: '#f7a06a' },
-  { name: '김소정', total: 19, discretionary: 5, color: '#a06af7' },
-];
-const EMP_MAP = {};
-EMPLOYEES.forEach(e => { EMP_MAP[e.name] = e; });
+  // ====== 초기화 ======
+  function init() {
+    document.getElementById('currentDateDisplay').textContent =
+      new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric',weekday:'long'});
 
-// ====== 상태 ======
-let leaves = [];
-let isAdmin = false;
-let calDate = new Date();
-let selectedDate = null;
-let selectedLeaveType = '연차';
-let currentTab = 0;
-let pendingAction = null;
+    EMPLOYEES.forEach(e => {
+      document.getElementById('applyEmployee').innerHTML += '<option value="'+e.name+'">'+e.name+'</option>';
+      document.getElementById('historyFilter').innerHTML += '<option value="'+e.name+'">'+e.name+'</option>';
+    });
 
-// ====== 초기화 ======
-function init() {
-  document.getElementById('currentDateDisplay').textContent =
-    new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric',weekday:'long'});
-
-  EMPLOYEES.forEach(e => {
-    document.getElementById('applyEmployee').innerHTML += `<option value="${e.name}">${e.name}</option>`;
-    document.getElementById('historyFilter').innerHTML += `<option value="${e.name}">${e.name}</option>`;
-  });
-
-  renderCalendar();
-
-  // Firestore 실시간 리스닝
-  const q = query(collection(db, 'leaves'), orderBy('appliedAt', 'desc'));
-  onSnapshot(q, (snapshot) => {
-    leaves = snapshot.docs.map(doc => ({ ...doc.data(), firestoreId: doc.id }));
     renderCalendar();
-    if (currentTab === 1) { renderStats(); renderHistory(); }
-    if (currentTab === 2) renderApprovals();
-    // 로딩 숨기기
-    document.getElementById('loadingOverlay').classList.add('hide');
-  }, (error) => {
-    console.error('Firestore 오류:', error);
-    document.getElementById('loadingOverlay').classList.add('hide');
-    showToast('데이터 로드 실패. 새로고침 해주세요.', 'error');
-  });
-}
 
-// ====== 관리자 ======
-window.openLoginModal = function() {
-  document.getElementById('loginInput').value = '';
-  document.getElementById('loginError').textContent = '';
-  document.getElementById('loginOverlay').classList.add('show');
-  setTimeout(() => document.getElementById('loginInput').focus(), 200);
-};
-window.closeLoginModal = function() { document.getElementById('loginOverlay').classList.remove('show'); };
-
-window.doLogin = function() {
-  const pw = document.getElementById('loginInput').value;
-  if (pw === ADMIN_PW) {
-    isAdmin = true;
-    closeLoginModal();
-    updateAdminUI();
-    showToast('관리자로 로그인되었습니다.', 'success');
-    switchTab(2);
-  } else {
-    const input = document.getElementById('loginInput');
-    document.getElementById('loginError').textContent = '비밀번호가 올바르지 않습니다.';
-    input.classList.add('error');
-    input.value = '';
-    setTimeout(() => input.classList.remove('error'), 400);
-  }
-};
-
-window.doLogout = function() {
-  isAdmin = false;
-  updateAdminUI();
-  switchTab(0);
-  showToast('로그아웃되었습니다.', 'success');
-};
-
-function updateAdminUI() {
-  const statusEl = document.getElementById('adminStatus');
-  const navTabs = document.getElementById('navTabs');
-  if (isAdmin) {
-    statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px"><div class="admin-badge">🛡️ 관리자 모드</div><button class="admin-logout-btn" onclick="doLogout()">로그아웃</button></div>`;
-    if (!document.getElementById('adminTab')) {
-      const btn = document.createElement('button');
-      btn.className = 'tab-btn admin-tab'; btn.id = 'adminTab';
-      btn.innerHTML = '✅ 승인 관리';
-      btn.onclick = () => switchTab(2);
-      navTabs.appendChild(btn);
-    }
-  } else {
-    statusEl.innerHTML = `<button class="admin-login-btn" onclick="openLoginModal()">🔐 관리자 로그인</button>`;
-    const adminTab = document.getElementById('adminTab');
-    if (adminTab) adminTab.remove();
-  }
-}
-
-// ====== 탭 ======
-window.switchTab = function(idx) {
-  if (idx === 2 && !isAdmin) { openLoginModal(); return; }
-  currentTab = idx;
-  document.querySelectorAll('.tab-btn').forEach((btn, i) => btn.classList.toggle('active', i === idx));
-  document.querySelectorAll('.section').forEach((sec, i) => sec.classList.toggle('active', i === idx));
-  if (idx === 1) { renderStats(); renderHistory(); }
-  if (idx === 2) renderApprovals();
-};
-
-// ====== 캘린더 ======
-window.changeMonth = function(dir) { calDate.setMonth(calDate.getMonth() + dir); renderCalendar(); };
-window.goToToday = function() { calDate = new Date(); renderCalendar(); };
-
-function renderCalendar() {
-  const year = calDate.getFullYear(), month = calDate.getMonth();
-  document.getElementById('calMonth').textContent = MONTHS[month];
-  document.getElementById('calYear').textContent = year + '년';
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month+1, 0).getDate();
-  const today = new Date();
-  const container = document.getElementById('calCells');
-  container.innerHTML = '';
-
-  for (let i = 0; i < firstDay; i++) {
-    const cell = document.createElement('div');
-    cell.className = 'cal-cell empty';
-    container.appendChild(cell);
-  }
-  for (let d = 1; d <= daysInMonth; d++) {
-    const date = new Date(year, month, d);
-    const dow = date.getDay();
-    const cell = document.createElement('div');
-    cell.className = 'cal-cell';
-    if (dow === 0) cell.classList.add('sunday');
-    if (dow === 6) cell.classList.add('saturday');
-    if (today.getFullYear()===year && today.getMonth()===month && today.getDate()===d) cell.classList.add('today');
-    if (selectedDate && selectedDate.toDateString()===date.toDateString()) cell.classList.add('selected');
-
-    const numSpan = document.createElement('span');
-    numSpan.textContent = d;
-    cell.appendChild(numSpan);
-
-    const dateStr = formatDate(date);
-    const dayLeaves = leaves.filter(l => l.startDate === dateStr);
-    if (dayLeaves.length > 0) {
-      const dots = document.createElement('div');
-      dots.className = 'leave-dots';
-      dayLeaves.slice(0,3).forEach(l => {
-        const dot = document.createElement('div');
-        dot.className = 'leave-dot';
-        dot.style.background = l.status==='approved'?'var(--approved)':l.status==='rejected'?'var(--rejected)':'var(--pending)';
-        dots.appendChild(dot);
+    // Firestore 실시간 연동
+    db.collection('leaves').orderBy('appliedAt', 'desc').onSnapshot(function(snapshot) {
+      leaves = snapshot.docs.map(function(doc) {
+        return Object.assign({}, doc.data(), { firestoreId: doc.id });
       });
-      cell.appendChild(dots);
+      renderCalendar();
+      if (currentTab === 1) { renderStats(); renderHistory(); }
+      if (currentTab === 2) renderApprovals();
+      document.getElementById('loadingOverlay').classList.add('hide');
+    }, function(error) {
+      console.error('Firestore 오류:', error);
+      document.getElementById('loadingOverlay').classList.add('hide');
+      showToast('데이터 로드 실패. 새로고침 해주세요.', 'error');
+    });
+  }
+
+  // ====== 관리자 ======
+  function openLoginModal() {
+    document.getElementById('loginInput').value = '';
+    document.getElementById('loginError').textContent = '';
+    document.getElementById('loginOverlay').classList.add('show');
+    setTimeout(function() { document.getElementById('loginInput').focus(); }, 200);
+  }
+  function closeLoginModal() { document.getElementById('loginOverlay').classList.remove('show'); }
+
+  function doLogin() {
+    var pw = document.getElementById('loginInput').value;
+    if (pw === ADMIN_PW) {
+      isAdmin = true;
+      closeLoginModal();
+      updateAdminUI();
+      showToast('관리자로 로그인되었습니다.', 'success');
+      switchTab(2);
+    } else {
+      var input = document.getElementById('loginInput');
+      document.getElementById('loginError').textContent = '비밀번호가 올바르지 않습니다.';
+      input.classList.add('error');
+      input.value = '';
+      setTimeout(function() { input.classList.remove('error'); }, 400);
     }
-    cell.onclick = () => handleDateClick(date);
-    container.appendChild(cell);
-  }
-}
-
-function handleDateClick(date) {
-  selectedDate = date;
-  updateDateDisplay();
-  renderCalendar();
-}
-
-function updateDateDisplay() {
-  const el = document.getElementById('dateRangeDisplay');
-  if (!selectedDate) { el.textContent = '날짜를 선택해주세요'; el.classList.remove('filled'); return; }
-  el.classList.add('filled');
-  const dayCount = selectedLeaveType.includes('반차') ? 0.5 : 1;
-  el.textContent = formatDate(selectedDate) + ' (' + dayCount + '일)';
-}
-
-function formatDate(date) {
-  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-}
-
-window.selectLeaveType = function(btn, type) {
-  document.querySelectorAll('.leave-type-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  selectedLeaveType = type;
-  const empName = document.getElementById('applyEmployee').value;
-  if (empName) updateRemainingInfo();
-  updateDateDisplay();
-};
-
-window.updateRemainingInfo = function() {
-  const name = document.getElementById('applyEmployee').value;
-  const el = document.getElementById('remainingInfo');
-  if (!name) { el.style.display = 'none'; return; }
-  el.style.display = 'flex';
-  const emp = EMP_MAP[name];
-  if (selectedLeaveType === '재량휴가') {
-    document.getElementById('remainingLabel').textContent = '잔여 재량휴가';
-    document.getElementById('remainingDays').textContent = (emp.discretionary - getUsedDiscretionary(name)) + '일';
-  } else {
-    document.getElementById('remainingLabel').textContent = '잔여 연차';
-    document.getElementById('remainingDays').textContent = (emp.total - getUsedLeave(name)) + '일';
-  }
-};
-
-function getUsedLeave(name) {
-  return leaves.filter(l => l.employee===name && l.status!=='rejected' && l.type!=='재량휴가').reduce((sum,l) => sum+l.days, 0);
-}
-function getUsedDiscretionary(name) {
-  return leaves.filter(l => l.employee===name && l.status!=='rejected' && l.type==='재량휴가').reduce((sum,l) => sum+l.days, 0);
-}
-
-// ====== 연차 신청 (Firestore 저장) ======
-window.submitLeave = async function() {
-  const name = document.getElementById('applyEmployee').value;
-  const reason = document.getElementById('applyReason').value;
-  if (!name) { showToast('직원을 선택해주세요.', 'error'); return; }
-  if (!selectedDate) { showToast('날짜를 선택해주세요.', 'error'); return; }
-
-  const days = selectedLeaveType.includes('반차') ? 0.5 : 1;
-  const emp = EMP_MAP[name];
-
-  if (selectedLeaveType === '재량휴가') {
-    const remaining = emp.discretionary - getUsedDiscretionary(name);
-    if (days > remaining) { showToast(`재량휴가 잔여일이 부족합니다. (잔여: ${remaining}일)`, 'error'); return; }
-  } else if (selectedLeaveType !== '공가') {
-    const remaining = emp.total - getUsedLeave(name);
-    if (days > remaining) { showToast(`잔여 연차가 부족합니다. (잔여: ${remaining}일)`, 'error'); return; }
   }
 
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  btn.textContent = '신청 중...';
+  function doLogout() {
+    isAdmin = false;
+    updateAdminUI();
+    switchTab(0);
+    showToast('로그아웃되었습니다.', 'success');
+  }
 
-  try {
-    await addDoc(collection(db, 'leaves'), {
+  function updateAdminUI() {
+    var statusEl = document.getElementById('adminStatus');
+    var navTabs = document.getElementById('navTabs');
+    if (isAdmin) {
+      statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:8px"><div class="admin-badge">🛡️ 관리자 모드</div><button class="admin-logout-btn" onclick="doLogout()">로그아웃</button></div>';
+      if (!document.getElementById('adminTab')) {
+        var btn = document.createElement('button');
+        btn.className = 'tab-btn admin-tab'; btn.id = 'adminTab';
+        btn.innerHTML = '✅ 승인 관리';
+        btn.onclick = function() { switchTab(2); };
+        navTabs.appendChild(btn);
+      }
+    } else {
+      statusEl.innerHTML = '<button class="admin-login-btn" onclick="openLoginModal()">🔐 관리자 로그인</button>';
+      var adminTab = document.getElementById('adminTab');
+      if (adminTab) adminTab.remove();
+    }
+  }
+
+  // ====== 탭 ======
+  function switchTab(idx) {
+    if (idx === 2 && !isAdmin) { openLoginModal(); return; }
+    currentTab = idx;
+    document.querySelectorAll('.tab-btn').forEach(function(btn, i) { btn.classList.toggle('active', i === idx); });
+    document.querySelectorAll('.section').forEach(function(sec, i) { sec.classList.toggle('active', i === idx); });
+    if (idx === 1) { renderStats(); renderHistory(); }
+    if (idx === 2) renderApprovals();
+  }
+
+  // ====== 캘린더 ======
+  function changeMonth(dir) { calDate.setMonth(calDate.getMonth() + dir); renderCalendar(); }
+  function goToToday() { calDate = new Date(); renderCalendar(); }
+
+  function renderCalendar() {
+    var year = calDate.getFullYear(), month = calDate.getMonth();
+    document.getElementById('calMonth').textContent = MONTHS[month];
+    document.getElementById('calYear').textContent = year + '년';
+    var firstDay = new Date(year, month, 1).getDay();
+    var daysInMonth = new Date(year, month+1, 0).getDate();
+    var today = new Date();
+    var container = document.getElementById('calCells');
+    container.innerHTML = '';
+
+    for (var i = 0; i < firstDay; i++) {
+      var empty = document.createElement('div');
+      empty.className = 'cal-cell empty';
+      container.appendChild(empty);
+    }
+    for (var d = 1; d <= daysInMonth; d++) {
+      (function(d) {
+        var date = new Date(year, month, d);
+        var dow = date.getDay();
+        var cell = document.createElement('div');
+        cell.className = 'cal-cell';
+        if (dow === 0) cell.classList.add('sunday');
+        if (dow === 6) cell.classList.add('saturday');
+        if (today.getFullYear()===year && today.getMonth()===month && today.getDate()===d) cell.classList.add('today');
+        if (selectedDate && selectedDate.toDateString()===date.toDateString()) cell.classList.add('selected');
+
+        var numSpan = document.createElement('span');
+        numSpan.textContent = d;
+        cell.appendChild(numSpan);
+
+        var dateStr = formatDate(date);
+        var dayLeaves = leaves.filter(function(l) { return l.startDate === dateStr; });
+        if (dayLeaves.length > 0) {
+          var dots = document.createElement('div');
+          dots.className = 'leave-dots';
+          dayLeaves.slice(0,3).forEach(function(l) {
+            var dot = document.createElement('div');
+            dot.className = 'leave-dot';
+            dot.style.background = l.status==='approved'?'var(--approved)':l.status==='rejected'?'var(--rejected)':'var(--pending)';
+            dots.appendChild(dot);
+          });
+          cell.appendChild(dots);
+        }
+        cell.onclick = function() { handleDateClick(date); };
+        container.appendChild(cell);
+      })(d);
+    }
+  }
+
+  function handleDateClick(date) {
+    selectedDate = date;
+    updateDateDisplay();
+    renderCalendar();
+  }
+
+  function updateDateDisplay() {
+    var el = document.getElementById('dateRangeDisplay');
+    if (!selectedDate) { el.textContent = '날짜를 선택해주세요'; el.classList.remove('filled'); return; }
+    el.classList.add('filled');
+    var dayCount = selectedLeaveType.includes('반차') ? 0.5 : 1;
+    el.textContent = formatDate(selectedDate) + ' (' + dayCount + '일)';
+  }
+
+  function formatDate(date) {
+    return date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
+  }
+
+  function selectLeaveType(btn, type) {
+    document.querySelectorAll('.leave-type-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    selectedLeaveType = type;
+    var empName = document.getElementById('applyEmployee').value;
+    if (empName) updateRemainingInfo();
+    updateDateDisplay();
+  }
+
+  function updateRemainingInfo() {
+    var name = document.getElementById('applyEmployee').value;
+    var el = document.getElementById('remainingInfo');
+    if (!name) { el.style.display = 'none'; return; }
+    el.style.display = 'flex';
+    var emp = EMP_MAP[name];
+    if (selectedLeaveType === '재량휴가') {
+      document.getElementById('remainingLabel').textContent = '잔여 재량휴가';
+      document.getElementById('remainingDays').textContent = (emp.discretionary - getUsedDiscretionary(name)) + '일';
+    } else {
+      document.getElementById('remainingLabel').textContent = '잔여 연차';
+      document.getElementById('remainingDays').textContent = (emp.total - getUsedLeave(name)) + '일';
+    }
+  }
+
+  function getUsedLeave(name) {
+    return leaves.filter(function(l) { return l.employee===name && l.status!=='rejected' && l.type!=='재량휴가'; })
+      .reduce(function(sum,l) { return sum+l.days; }, 0);
+  }
+  function getUsedDiscretionary(name) {
+    return leaves.filter(function(l) { return l.employee===name && l.status!=='rejected' && l.type==='재량휴가'; })
+      .reduce(function(sum,l) { return sum+l.days; }, 0);
+  }
+
+  // ====== 연차 신청 ======
+  function submitLeave() {
+    var name = document.getElementById('applyEmployee').value;
+    var reason = document.getElementById('applyReason').value;
+    if (!name) { showToast('직원을 선택해주세요.', 'error'); return; }
+    if (!selectedDate) { showToast('날짜를 선택해주세요.', 'error'); return; }
+
+    var days = selectedLeaveType.includes('반차') ? 0.5 : 1;
+    var emp = EMP_MAP[name];
+
+    if (selectedLeaveType === '재량휴가') {
+      var remainingD = emp.discretionary - getUsedDiscretionary(name);
+      if (days > remainingD) { showToast('재량휴가 잔여일이 부족합니다. (잔여: ' + remainingD + '일)', 'error'); return; }
+    } else if (selectedLeaveType !== '공가') {
+      var remainingL = emp.total - getUsedLeave(name);
+      if (days > remainingL) { showToast('잔여 연차가 부족합니다. (잔여: ' + remainingL + '일)', 'error'); return; }
+    }
+
+    var btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '신청 중...';
+
+    db.collection('leaves').add({
       employee: name,
       type: selectedLeaveType,
       startDate: formatDate(selectedDate),
       endDate: formatDate(selectedDate),
-      days,
+      days: days,
       reason: reason || '미기재',
       status: 'pending',
-      appliedAt: formatDate(new Date()),
+      appliedAt: formatDate(new Date())
+    }).then(function() {
+      showToast(name + '님의 ' + selectedLeaveType + ' 신청이 완료되었습니다.', 'success');
+      selectedDate = null;
+      document.getElementById('applyReason').value = '';
+      updateDateDisplay();
+      updateRemainingInfo();
+      btn.disabled = false;
+      btn.textContent = '연차 신청하기';
+    }).catch(function(e) {
+      console.error(e);
+      showToast('신청 중 오류가 발생했습니다.', 'error');
+      btn.disabled = false;
+      btn.textContent = '연차 신청하기';
     });
-    showToast(`${name}님의 ${selectedLeaveType} 신청이 완료되었습니다.`, 'success');
-    selectedDate = null;
-    document.getElementById('applyReason').value = '';
-    updateDateDisplay();
-    updateRemainingInfo();
-  } catch (e) {
-    showToast('신청 중 오류가 발생했습니다.', 'error');
   }
 
-  btn.disabled = false;
-  btn.textContent = '연차 신청하기';
-};
-
-// ====== 현황 ======
-function renderStats() {
-  const grid = document.getElementById('statsGrid');
-  grid.innerHTML = '';
-  EMPLOYEES.forEach(emp => {
-    const usedLeave = getUsedLeave(emp.name);
-    const usedDisc = getUsedDiscretionary(emp.name);
-    const remainLeave = emp.total - usedLeave;
-    const leavePct = Math.min((usedLeave / emp.total) * 100, 100);
-    const discPct = Math.min((usedDisc / emp.discretionary) * 100, 100);
-    grid.innerHTML += `
-      <div class="stat-card">
-        <div class="stat-card-header">
-          <div><div class="employee-name">${emp.name}</div></div>
-          <div class="employee-avatar" style="background:${emp.color}">${emp.name[0]}</div>
-        </div>
-        <div class="stat-bars">
-          <div class="stat-row">
-            <div class="stat-row-header"><span>연차 사용률</span><span>${usedLeave}/${emp.total}일</span></div>
-            <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:${leavePct}%;background:${emp.color}"></div></div>
-          </div>
-          <div class="stat-row">
-            <div class="stat-row-header"><span>재량휴가 사용률</span><span>${usedDisc}/${emp.discretionary}일</span></div>
-            <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:${discPct}%;background:var(--accent4)"></div></div>
-          </div>
-        </div>
-        <div class="stat-numbers">
-          <div class="stat-num"><div class="stat-num-val" style="color:${emp.color}">${emp.total}</div><div class="stat-num-label">총 연차</div></div>
-          <div class="stat-num"><div class="stat-num-val" style="color:var(--accent4)">${emp.discretionary}</div><div class="stat-num-label">재량휴가</div></div>
-          <div class="stat-num"><div class="stat-num-val" style="color:var(--accent2)">${usedLeave}</div><div class="stat-num-label">사용 연차</div></div>
-          <div class="stat-num"><div class="stat-num-val" style="color:var(--accent3)">${remainLeave}</div><div class="stat-num-label">잔여 연차</div></div>
-        </div>
-      </div>`;
-  });
-}
-
-function renderHistory() {
-  const filter = document.getElementById('historyFilter').value;
-  const tbody = document.getElementById('historyTable');
-  const filtered = leaves.filter(l => !filter || l.employee===filter);
-  if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:40px">신청 내역이 없습니다</td></tr>`;
-    return;
+  // ====== 현황 ======
+  function renderStats() {
+    var grid = document.getElementById('statsGrid');
+    grid.innerHTML = '';
+    EMPLOYEES.forEach(function(emp) {
+      var usedLeave = getUsedLeave(emp.name);
+      var usedDisc = getUsedDiscretionary(emp.name);
+      var remainLeave = emp.total - usedLeave;
+      var leavePct = Math.min((usedLeave / emp.total) * 100, 100);
+      var discPct = Math.min((usedDisc / emp.discretionary) * 100, 100);
+      grid.innerHTML += '<div class="stat-card">' +
+        '<div class="stat-card-header"><div><div class="employee-name">'+emp.name+'</div></div><div class="employee-avatar" style="background:'+emp.color+'">'+emp.name[0]+'</div></div>' +
+        '<div class="stat-bars">' +
+          '<div class="stat-row"><div class="stat-row-header"><span>연차 사용률</span><span>'+usedLeave+'/'+emp.total+'일</span></div><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:'+leavePct+'%;background:'+emp.color+'"></div></div></div>' +
+          '<div class="stat-row"><div class="stat-row-header"><span>재량휴가 사용률</span><span>'+usedDisc+'/'+emp.discretionary+'일</span></div><div class="stat-bar-bg"><div class="stat-bar-fill" style="width:'+discPct+'%;background:var(--accent4)"></div></div></div>' +
+        '</div>' +
+        '<div class="stat-numbers">' +
+          '<div class="stat-num"><div class="stat-num-val" style="color:'+emp.color+'">'+emp.total+'</div><div class="stat-num-label">총 연차</div></div>' +
+          '<div class="stat-num"><div class="stat-num-val" style="color:var(--accent4)">'+emp.discretionary+'</div><div class="stat-num-label">재량휴가</div></div>' +
+          '<div class="stat-num"><div class="stat-num-val" style="color:var(--accent2)">'+usedLeave+'</div><div class="stat-num-label">사용 연차</div></div>' +
+          '<div class="stat-num"><div class="stat-num-val" style="color:var(--accent3)">'+remainLeave+'</div><div class="stat-num-label">잔여 연차</div></div>' +
+        '</div></div>';
+    });
   }
-  tbody.innerHTML = filtered.map(l => `
-    <tr>
-      <td><strong>${l.employee}</strong></td>
-      <td>${l.type}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px">${l.startDate}</td>
-      <td><strong>${l.days}일</strong></td>
-      <td style="color:var(--text2)">${l.reason}</td>
-      <td><span class="badge badge-${l.status}">${l.status==='approved'?'승인':l.status==='rejected'?'반려':'대기중'}</span></td>
-      <td style="color:var(--text3);font-size:12px">${l.appliedAt}</td>
-    </tr>`).join('');
-}
 
-// ====== 승인 관리 ======
-function renderApprovals() {
-  const grid = document.getElementById('approvalGrid');
-  if (leaves.length === 0) {
-    grid.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>연차 신청 내역이 없습니다</p></div>`;
-    return;
+  function renderHistory() {
+    var filter = document.getElementById('historyFilter').value;
+    var tbody = document.getElementById('historyTable');
+    var filtered = leaves.filter(function(l) { return !filter || l.employee===filter; });
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:40px">신청 내역이 없습니다</td></tr>';
+      return;
+    }
+    tbody.innerHTML = filtered.map(function(l) {
+      return '<tr><td><strong>'+l.employee+'</strong></td><td>'+l.type+'</td>' +
+        '<td style="font-family:\'DM Mono\',monospace;font-size:12px">'+l.startDate+'</td>' +
+        '<td><strong>'+l.days+'일</strong></td>' +
+        '<td style="color:var(--text2)">'+l.reason+'</td>' +
+        '<td><span class="badge badge-'+l.status+'">'+(l.status==='approved'?'승인':l.status==='rejected'?'반려':'대기중')+'</span></td>' +
+        '<td style="color:var(--text3);font-size:12px">'+l.appliedAt+'</td></tr>';
+    }).join('');
   }
-  const sorted = [...leaves].sort((a,b) => ({pending:0,approved:1,rejected:2}[a.status] - {pending:0,approved:1,rejected:2}[b.status]));
-  grid.innerHTML = sorted.map(l => {
-    const emp = EMP_MAP[l.employee];
-    const isPending = l.status==='pending';
-    const statusLabel = l.status==='approved'
-      ? `<span style="color:var(--approved);font-size:13px;font-weight:700">✅ 승인완료</span>`
-      : l.status==='rejected'
-      ? `<span style="color:var(--rejected);font-size:13px;font-weight:700">❌ 반려</span>` : '';
-    const actions = isPending
-      ? `<button class="btn-approve" onclick="openApprovalModal('approve','${l.firestoreId}')">✓ 승인</button><button class="btn-reject" onclick="openApprovalModal('reject','${l.firestoreId}')">✗ 반려</button>`
-      : `<div class="btn-locked">🔒 처리완료</div>`;
-    return `<div class="approval-card ${l.status}">
-      <div class="approval-avatar" style="background:${emp.color}">${l.employee[0]}</div>
-      <div class="approval-info">
-        <div class="approval-name">${l.employee} · <span style="font-weight:400;font-size:13px">${l.type}</span></div>
-        <div class="approval-detail">${l.days}일 · ${l.reason}</div>
-        <div class="approval-dates">${l.startDate}</div>
-      </div>
-      ${statusLabel}
-      <div class="approval-actions">${actions}</div>
-    </div>`;
-  }).join('');
-}
 
-window.openApprovalModal = function(action, firestoreId) {
-  const leave = leaves.find(l => l.firestoreId===firestoreId);
-  pendingAction = { action, firestoreId };
-  const confirmBtn = document.getElementById('modalConfirmBtn');
-  if (action==='approve') {
-    document.getElementById('modalTitle').textContent = '연차 승인';
-    document.getElementById('modalDesc').textContent = `${leave.employee}님의 ${leave.type} 신청을 승인하시겠습니까?\n날짜: ${leave.startDate} (${leave.days}일)\n\n승인 후에는 수정이 불가합니다.`;
-    confirmBtn.textContent = '승인하기'; confirmBtn.className = 'modal-btn modal-btn-confirm';
-  } else {
-    document.getElementById('modalTitle').textContent = '연차 반려';
-    document.getElementById('modalDesc').textContent = `${leave.employee}님의 ${leave.type} 신청을 반려하시겠습니까?\n\n반려 후에는 수정이 불가합니다.`;
-    confirmBtn.textContent = '반려하기'; confirmBtn.className = 'modal-btn modal-btn-reject-confirm';
+  // ====== 승인 관리 ======
+  function renderApprovals() {
+    var grid = document.getElementById('approvalGrid');
+    if (leaves.length === 0) {
+      grid.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>연차 신청 내역이 없습니다</p></div>';
+      return;
+    }
+    var sorted = leaves.slice().sort(function(a,b) {
+      var order = {pending:0,approved:1,rejected:2};
+      return order[a.status] - order[b.status];
+    });
+    grid.innerHTML = sorted.map(function(l) {
+      var emp = EMP_MAP[l.employee];
+      var isPending = l.status==='pending';
+      var statusLabel = l.status==='approved'
+        ? '<span style="color:var(--approved);font-size:13px;font-weight:700">✅ 승인완료</span>'
+        : l.status==='rejected'
+        ? '<span style="color:var(--rejected);font-size:13px;font-weight:700">❌ 반려</span>' : '';
+      var actions = isPending
+        ? '<button class="btn-approve" onclick="openApprovalModal(\'approve\',\''+l.firestoreId+'\')">✓ 승인</button><button class="btn-reject" onclick="openApprovalModal(\'reject\',\''+l.firestoreId+'\')">✗ 반려</button>'
+        : '<div class="btn-locked">🔒 처리완료</div>';
+      return '<div class="approval-card '+l.status+'">' +
+        '<div class="approval-avatar" style="background:'+emp.color+'">'+l.employee[0]+'</div>' +
+        '<div class="approval-info">' +
+          '<div class="approval-name">'+l.employee+' · <span style="font-weight:400;font-size:13px">'+l.type+'</span></div>' +
+          '<div class="approval-detail">'+l.days+'일 · '+l.reason+'</div>' +
+          '<div class="approval-dates">'+l.startDate+'</div>' +
+        '</div>' +
+        statusLabel +
+        '<div class="approval-actions">'+actions+'</div>' +
+      '</div>';
+    }).join('');
   }
-  document.getElementById('modalOverlay').classList.add('show');
-};
 
-window.closeModal = function() { document.getElementById('modalOverlay').classList.remove('show'); pendingAction = null; };
-
-window.modalConfirm = async function() {
-  if (!pendingAction) return;
-  const { action, firestoreId } = pendingAction;
-  const leave = leaves.find(l => l.firestoreId===firestoreId);
-  closeModal();
-  try {
-    await updateDoc(doc(db, 'leaves', firestoreId), { status: action==='approve' ? 'approved' : 'rejected' });
-    showToast(`${leave.employee}님의 ${leave.type}이 ${action==='approve'?'승인':'반려'}되었습니다.`, action==='approve'?'success':'error');
-  } catch(e) {
-    showToast('처리 중 오류가 발생했습니다.', 'error');
+  // ====== 모달 ======
+  function openApprovalModal(action, firestoreId) {
+    var leave = leaves.find(function(l) { return l.firestoreId===firestoreId; });
+    pendingAction = { action: action, firestoreId: firestoreId };
+    var confirmBtn = document.getElementById('modalConfirmBtn');
+    if (action==='approve') {
+      document.getElementById('modalTitle').textContent = '연차 승인';
+      document.getElementById('modalDesc').textContent = leave.employee+'님의 '+leave.type+' 신청을 승인하시겠습니까?\n날짜: '+leave.startDate+' ('+leave.days+'일)\n\n승인 후에는 수정이 불가합니다.';
+      confirmBtn.textContent = '승인하기'; confirmBtn.className = 'modal-btn modal-btn-confirm';
+    } else {
+      document.getElementById('modalTitle').textContent = '연차 반려';
+      document.getElementById('modalDesc').textContent = leave.employee+'님의 '+leave.type+' 신청을 반려하시겠습니까?\n\n반려 후에는 수정이 불가합니다.';
+      confirmBtn.textContent = '반려하기'; confirmBtn.className = 'modal-btn modal-btn-reject-confirm';
+    }
+    document.getElementById('modalOverlay').classList.add('show');
   }
-};
 
-document.getElementById('modalOverlay').onclick = function(e) { if(e.target===this) closeModal(); };
-document.getElementById('loginOverlay').onclick = function(e) { if(e.target===this) closeLoginModal(); };
+  function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); pendingAction = null; }
 
-// ====== 토스트 ======
-function showToast(msg, type='success') {
-  const toast = document.getElementById('toast');
-  document.getElementById('toastIcon').textContent = type==='success' ? '✅' : '❌';
-  document.getElementById('toastMsg').textContent = msg;
-  toast.className = `toast ${type} show`;
-  setTimeout(() => toast.classList.remove('show'), 3000);
-}
+  function modalConfirm() {
+    if (!pendingAction) return;
+    var action = pendingAction.action, firestoreId = pendingAction.firestoreId;
+    var leave = leaves.find(function(l) { return l.firestoreId===firestoreId; });
+    closeModal();
+    db.collection('leaves').doc(firestoreId).update({
+      status: action==='approve' ? 'approved' : 'rejected'
+    }).then(function() {
+      showToast(leave.employee+'님의 '+leave.type+'이 '+(action==='approve'?'승인':'반려')+'되었습니다.', action==='approve'?'success':'error');
+    }).catch(function() {
+      showToast('처리 중 오류가 발생했습니다.', 'error');
+    });
+  }
 
-init();
+  document.getElementById('modalOverlay').onclick = function(e) { if(e.target===this) closeModal(); };
+  document.getElementById('loginOverlay').onclick = function(e) { if(e.target===this) closeLoginModal(); };
+
+  // ====== 토스트 ======
+  function showToast(msg, type) {
+    type = type || 'success';
+    var toast = document.getElementById('toast');
+    document.getElementById('toastIcon').textContent = type==='success' ? '✅' : '❌';
+    document.getElementById('toastMsg').textContent = msg;
+    toast.className = 'toast ' + type + ' show';
+    setTimeout(function() { toast.classList.remove('show'); }, 3000);
+  }
+
+  init();
 </script>
 </body>
 </html>
